@@ -1,0 +1,11 @@
+*~
+*#
+*.pyc
+notebooks/.ipynb_checkpoints
+.*
+*.zip
+*.gz
+*.csv
+models/*
+submissions/*
+!/.gitignore
