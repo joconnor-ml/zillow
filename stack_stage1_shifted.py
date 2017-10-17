@@ -27,28 +27,24 @@ for c in train_df.columns:
         encoders[c] = LabelEncoder()
         train_df[c] = encoders[c].fit_transform(list(train_df[c].values))
 
-log_cols = []
-for col in train_df:
-    if train_df[col].mean() > train_df[col].median()*1.1:
-        print(col, train_df[col].mean(), train_df[col].median())
-        train_df.loc[:, col] = np.log(train_df[col]+1)
-        log_cols.append(col)
+#for col in train_df:
+#    if train_df[col].mean() > train_df[col].median()*1.1:
+#        print(col, train_df[col].mean(), train_df[col].median())
+#        train_df.loc[:, col] = np.log(train_df[col]+1)
 
 train_df = train_df.replace(np.inf, np.nan).replace(-np.inf, np.nan)
 
 with open("input/encoders.pkl", "wb") as f:
     pkl.dump(encoders, f)
 
-with open("input/log_cols.pkl", "wb") as f:
-    pkl.dump(log_cols, f)
-
-# tolerance = 0.1
-y = train_y  # np.clip(train_y, np.median(train_y)-tolerance, np.median(train_y)+tolerance)
+tolerance = 0.1
+y = np.clip(train_y, np.median(train_y)-tolerance, np.median(train_y)+tolerance)
 
 cv = LeaveOneGroupOut()
 
 preds = {}
-for name, model in modelling.stage1_models.items():
+for n, model in modelling.stage1_models.items():
+    name = "clip_" + n
     print(name)
     preds[name] = cross_val_predict(model, train_df, y, cv=cv, groups=month)
     print(name, np.abs((train_y - preds[name])).mean())
@@ -59,4 +55,4 @@ for name, model in modelling.stage1_models.items():
 del train_df
 
 train_df = pd.DataFrame(preds)
-train_df.to_csv("stack_stage1_1.csv")
+train_df.to_csv("stack_stage1.csv")

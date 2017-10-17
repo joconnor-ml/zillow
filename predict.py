@@ -1,19 +1,24 @@
-import numpy as np
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler, Imputer
+from sklearn.model_selection import LeaveOneGroupOut, cross_val_predict
 from zillow import modelling
-
 import pickle as pkl
+import dask.dataframe as dd
+import sys
 
+i = sys.argv[1]
 
-test_df = pd.read_hdf("input/test.hdf", "data")
+test_df = pd.read_hdf("input/test2.{}.hdf".format(i), "data")
 parcelid = test_df["ParcelId"]
 date = test_df["transactiondate"]
+month = test_df["yearmonth"]
 
-cat_cols = ["hashottuborspa", "propertycountylandusecode", "propertyzoningdesc", "fireplaceflag", "taxdelinquencyflag"]
-pid = test_df["ParcelId"]
-test_df = test_df.drop(['ParcelId', "parcelid", "transactiondate"] + cat_cols, axis=1)
-feat_names = test_df.columns.values
+with open("input/feat_names.pkl", "rb") as f:
+    feat_names = pkl.load(f)
+
+print(feat_names)
+test_df = test_df[list(feat_names)]
 
 for c in test_df.columns:
     if test_df[c].dtype == 'object':
@@ -21,20 +26,24 @@ for c in test_df.columns:
 
 preds = {}
 for name, model in modelling.stage1_models.items():
-    print(name)
     with open("models/{}.py".format(name), "rb") as f:
         model = pkl.load(f)
+    print(name)
     preds[name] = model.predict(test_df)
 
+del test_df
+
 test_df = pd.DataFrame(preds)
+test_df.to_csv("stack_stage1_test.csv")
+
 preds = {}
 for name, model in modelling.stage2_models.items():
-    print(name)
     with open("models/{}.py".format(name), "rb") as f:
         model = pkl.load(f)
-    preds[name] = model.predict(test_df).astype(np.float32)
-preds = pd.DataFrame(preds).mean(axis=1)
+    print(name)
+    preds[name] = model.predict(test_df)
+
+preds = pd.DataFrame(preds)
 preds["ParcelId"] = parcelid
 preds["date"] = date
-
-preds.to_csv("test_preds.csv")
+preds.to_csv("preds_raw.{}.csv").format(i)

@@ -8,4 +8,5 @@ notebooks/.ipynb_checkpoints
 *.csv
 models/*
 submissions/*
+logs/
 !/.gitignore
